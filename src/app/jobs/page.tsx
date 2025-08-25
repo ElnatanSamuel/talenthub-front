@@ -4,8 +4,52 @@ import JobsFilters from "@/components/JobsFilters";
 import { getJobs } from "@/lib/api";
 import RecruiterGate from "@/components/RecruiterGate";
 
-export default async function JobsPage() {
-  const jobs = await getJobs();
+type SearchParams = { [key: string]: string | string[] | undefined };
+
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
+  const q = (searchParams?.q as string) || undefined;
+  const location = (searchParams?.location as string) || undefined;
+  const typeParam = (searchParams?.type as string) || undefined; // kebab-case, comma-separated
+  const types = (typeParam || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => {
+      switch (t) {
+        case "full-time":
+          return "Full-time" as const;
+        case "part-time":
+          return "Part-time" as const;
+        case "contract":
+          return "Contract" as const;
+        case "internship":
+          return "Internship" as const;
+        default:
+          return undefined;
+      }
+    })
+    .filter(Boolean) as ("Full-time" | "Part-time" | "Contract" | "Internship")[];
+
+  const modeParam = (searchParams?.mode as string) || undefined; // on-site,remote,hybrid
+  const modes = (modeParam || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean) as ("on-site" | "remote" | "hybrid")[];
+
+  const expParam = (searchParams?.exp as string) || undefined; // entry,junior,mid,senior,lead,director
+  const exps = (expParam || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean) as string[];
+
+  const salaryMin = searchParams?.salaryMin ? Number(searchParams.salaryMin) : undefined;
+  const salaryMax = searchParams?.salaryMax ? Number(searchParams.salaryMax) : undefined;
+
+  const jobs = await getJobs({ q, location, types, modes, exps, salaryMin, salaryMax });
   return (
     <div className="space-y-6">
       <RecruiterGate to="/employers" />

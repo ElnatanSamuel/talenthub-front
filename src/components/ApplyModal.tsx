@@ -1,7 +1,7 @@
 "use client";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { applyToJob, uploadResume } from "@/lib/api";
+import { applyToJob } from "@/lib/api";
 import { useAuth } from "@/components/AuthContext";
 
 export default function ApplyModal({
@@ -18,7 +18,6 @@ export default function ApplyModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   if (!open) return null;
 
@@ -43,11 +42,6 @@ export default function ApplyModal({
 
     setLoading(true);
     try {
-      let resumeUrl: string | undefined;
-      if (resumeFile) {
-        const url = await uploadResume(resumeFile);
-        if (url) resumeUrl = url;
-      }
       const app = await applyToJob({
         jobId,
         userId: user.id,
@@ -56,12 +50,10 @@ export default function ApplyModal({
         linkedin,
         portfolio,
         coverLetter,
-        resumeUrl,
       });
       if (!app) throw new Error("Failed to apply");
       setSuccess("Application submitted successfully!");
       form.reset();
-      setResumeFile(null);
     } catch (err: any) {
       setError(
         err?.message || "Could not submit application. Please try again."
@@ -142,17 +134,7 @@ export default function ApplyModal({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Resume (PDF)
-            </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm"
-            />
-          </div>
+          {/* Resume upload removed per request */}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
           {success && <p className="text-sm text-green-600">{success}</p>}

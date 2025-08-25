@@ -27,8 +27,14 @@ export default function Employers() {
     const location = [city, country].filter(Boolean).join(", ");
     const minSalary = String(formData.get("minSalary") || "").trim();
     const maxSalary = String(formData.get("maxSalary") || "").trim();
+    const salaryType = String(formData.get("salaryType") || "").trim();
+    const companyName = String(formData.get("companyName") || "").trim();
     const jd = String(formData.get("jd") || "").trim();
-    const salary = minSalary || maxSalary ? `${minSalary}${minSalary && maxSalary ? "-" : ""}${maxSalary}` : undefined;
+    const vacanciesRaw = String(formData.get("vacancies") || "").trim();
+    const baseSalary = minSalary || maxSalary ? `${minSalary}${minSalary && maxSalary ? "-" : ""}${maxSalary}` : undefined;
+    const salary = baseSalary && salaryType
+      ? `${baseSalary} ${salaryType.toLowerCase()}`
+      : baseSalary || undefined;
     if (!title || !location) {
       setError("Please fill required fields: Job Title and Location.");
       return;
@@ -43,6 +49,9 @@ export default function Employers() {
       };
       if (salary) payload.salary = salary;
       if (user?.companyId) payload.companyId = user.companyId;
+      if (companyName) payload.companyName = companyName;
+      const vacanciesNum = Number(vacanciesRaw);
+      if (Number.isFinite(vacanciesNum) && vacanciesNum > 0) payload.vacancies = vacanciesNum;
       const job = await createJob(payload);
       if (!job) throw new Error("Failed to create job");
       form.reset();
@@ -75,6 +84,19 @@ export default function Employers() {
             name="jobTitle"
             placeholder="Add job title, role vacancies etc"
             className="w-full job-search-form rounded-md  px-4 py-3 text-sm outline-none placeholder:text-gray-400 "
+          />
+        </div>
+
+        {/* Company Name (optional) */}
+        <div>
+          <label htmlFor="companyName" className="block text-sm font-medium mb-2">
+            Company Name (optional)
+          </label>
+          <input
+            id="companyName"
+            name="companyName"
+            placeholder="e.g., Private Client or Acme Corp"
+            className="w-full job-search-form rounded-md px-4 py-3 text-sm outline-none placeholder:text-gray-400 "
           />
         </div>
 
@@ -172,16 +194,16 @@ export default function Employers() {
 
           {/* Vacancies */}
           <div>
-            <label className="block text-sm font-medium mb-2">Vacancies</label>
-            <div className="relative">
-              <select name="vacancies" className="w-full appearance-none job-search-form rounded-md px-4 py-3 text-sm outline-none ">
-                <option value="">Select..</option>
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <option key={i + 1}>{i + 1}</option>
-                ))}
-              </select>
-              <ChevronDownIcon />
-            </div>
+            <label htmlFor="vacancies" className="block text-sm font-medium mb-2">Vacancies</label>
+            <input
+              id="vacancies"
+              name="vacancies"
+              type="number"
+              min={1}
+              step={1}
+              placeholder="Number of open positions"
+              className="w-full job-search-form rounded-md px-4 py-3 text-sm outline-none placeholder:text-gray-400 "
+            />
           </div>
 
           {/* Job Level */}
@@ -202,30 +224,22 @@ export default function Employers() {
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-medium mb-2">Country</label>
-            <div className="relative">
-              <select name="country" className="w-full appearance-none job-search-form rounded-md px-4 py-3 text-sm outline-none ">
-                <option value="">Select..</option>
-                <option>India</option>
-                <option>United States</option>
-                <option>United Kingdom</option>
-                <option>Germany</option>
-              </select>
-              <ChevronDownIcon />
-            </div>
+            <label htmlFor="country" className="block text-sm font-medium mb-2">Country</label>
+            <input
+              id="country"
+              name="country"
+              placeholder="e.g., India"
+              className="w-full job-search-form rounded-md px-4 py-3 text-sm outline-none placeholder:text-gray-400 "
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">City</label>
-            <div className="relative">
-              <select name="city" className="w-full appearance-none job-search-form rounded-md px-4 py-3 text-sm outline-none ">
-                <option value="">Select..</option>
-                <option>Mumbai</option>
-                <option>Delhi</option>
-                <option>Bengaluru</option>
-                <option>Hyderabad</option>
-              </select>
-              <ChevronDownIcon />
-            </div>
+            <label htmlFor="city" className="block text-sm font-medium mb-2">City</label>
+            <input
+              id="city"
+              name="city"
+              placeholder="e.g., Bengaluru"
+              className="w-full job-search-form rounded-md px-4 py-3 text-sm outline-none placeholder:text-gray-400 "
+            />
           </div>
 
           {/* Description (full width) */}

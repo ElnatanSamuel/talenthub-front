@@ -172,14 +172,7 @@ export default function ApplicationDetailPage() {
                 </div>
               )}
 
-              {app.resumeUrl && (
-                <div className="sm:col-span-2">
-                  <div className="text-xs uppercase text-gray-500">Resume</div>
-                  <a href={app.resumeUrl} target="_blank" className="inline-flex items-center px-3 py-2 rounded-md bg-[#10B981] text-white text-sm font-medium hover:opacity-95">
-                    View Resume (PDF)
-                  </a>
-                </div>
-              )}
+              {/* Resume viewer removed per request */}
             </div>
 
             {app.coverLetter && (

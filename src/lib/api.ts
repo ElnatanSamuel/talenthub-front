@@ -4,7 +4,8 @@
 import type { Job as WebJob } from "@/data/types";
 import type { User as WebUser, Role } from "@/data/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+// const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_BASE = "http://localhost:4000";
 
 type ApiResponse<T> = { ok: boolean; data?: T; error?: string };
 
@@ -26,6 +27,8 @@ type JobServer = {
   location: string;
   salary?: string;
   description?: string;
+  applicationsCount?: number;
+  vacancies?: number;
 };
 
 type ApplicationServer = {
@@ -94,11 +97,16 @@ function mapJob(s: JobServer): WebJob {
     type: toTitleCaseType(s.type),
     salary: s.salary,
     createdAt: new Date().toISOString(),
+    applicationsCount: s.applicationsCount,
+    vacancies: s.vacancies,
   };
 }
 
 function mapApplication(a: ApplicationServer): ApplicationWeb {
-  const statusMap: Record<ApplicationServer["status"], ApplicationWeb["status"]> = {
+  const statusMap: Record<
+    ApplicationServer["status"],
+    ApplicationWeb["status"]
+  > = {
     applied: "applied",
     review: "reviewed",
     interview: "interview",
@@ -114,8 +122,13 @@ function mapApplication(a: ApplicationServer): ApplicationWeb {
   };
 }
 
-function mapRecruiterApplication(a: RecruiterApplicationServer): RecruiterApplicationWeb {
-  const statusMap: Record<RecruiterApplicationServer["status"], RecruiterApplicationWeb["status"]> = {
+function mapRecruiterApplication(
+  a: RecruiterApplicationServer
+): RecruiterApplicationWeb {
+  const statusMap: Record<
+    RecruiterApplicationServer["status"],
+    RecruiterApplicationWeb["status"]
+  > = {
     applied: "applied",
     review: "reviewed",
     interview: "interview",
@@ -149,7 +162,11 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     ...authHeader,
     ...(init?.headers as Record<string, string> | undefined),
   };
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`API ${res.status} ${res.statusText}`);
   return res.json();
 }
@@ -165,10 +182,101 @@ function mapUser(u: UserServer): WebUser {
   };
 }
 
-export async function getJobs(): Promise<WebJob[]> {
-  const json = await fetchJson<ApiResponse<JobServer[]>>("/jobs");
+export async function getJobs(params?: {
+  q?: string;
+  location?: string;
+  types?: WebJob["type"][]; // e.g., ["Full-time", "Contract"]
+  companyId?: string;
+  modes?: ("on-site" | "remote" | "hybrid")[];
+  exps?: string[]; // ["entry","junior","mid","senior","lead","director"]
+  salaryMin?: number;
+  salaryMax?: number;
+}): Promise<WebJob[]> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.location) query.set("location", params.location);
+  if (params?.companyId) query.set("companyId", params.companyId);
+  if (params?.types && params.types.length) {
+    const typeMap: Record<WebJob["type"], string> = {
+      "Full-time": "full-time",
+      "Part-time": "part-time",
+      Contract: "contract",
+      Internship: "internship",
+      Remote: "full-time",
+    };
+    const list = params.types
+      .map((t) => typeMap[t])
+      .filter(Boolean)
+      .join(",");
+    if (list) query.set("type", list);
+  }
+  const path = query.toString() ? `/jobs?${query.toString()}` : "/jobs";
+  const json = await fetchJson<ApiResponse<JobServer[]>>(path);
   if (!json.ok || !json.data) return [];
-  return json.data.map(mapJob);
+  const jobs = json.data.map(mapJob);
+
+  // Client-side filtering for mode/experience/salary (backend not yet supporting these)
+  const modes = params?.modes?.length ? new Set(params.modes) : null;
+  const exps = params?.exps?.length ? new Set(params.exps) : null;
+  const salaryMin = params?.salaryMin;
+  const salaryMax = params?.salaryMax;
+
+  function deriveMode(j: WebJob): "on-site" | "remote" | "hybrid" {
+    const loc = (j.location || "").toLowerCase();
+    const text = `${j.title} ${j.description || ""}`.toLowerCase();
+    if (loc.includes("remote") || text.includes("remote")) return "remote";
+    if (text.includes("hybrid")) return "hybrid";
+    return "on-site";
+  }
+
+  function deriveExp(j: WebJob): "entry" | "junior" | "mid" | "senior" | "lead" | "director" {
+    const t = `${j.title} ${j.description || ""}`.toLowerCase();
+    if (t.includes("director") || t.includes("executive")) return "director";
+    if (t.includes("lead") || t.includes("manager")) return "lead";
+    if (t.includes("senior") || /\bsr\b/.test(t)) return "senior";
+    if (t.includes("mid") || t.includes("intermediate")) return "mid";
+    if (t.includes("junior") || /\bjr\b/.test(t)) return "junior";
+    if (t.includes("intern") || t.includes("entry") || t.includes("fresher")) return "entry";
+    // default bucket
+    return "mid";
+  }
+
+  function parseSalaryBounds(s?: string): { min?: number; max?: number } {
+    if (!s) return {};
+    const nums: number[] = [];
+    const re = /([\d,.]+)\s*(k)?/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(s))) {
+      const raw = m[1].replace(/,/g, "");
+      let val = parseFloat(raw);
+      if (!isFinite(val)) continue;
+      if (m[2]) val *= 1000; // handle 'k'
+      nums.push(val);
+    }
+    if (!nums.length) return {};
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return { min, max };
+  }
+
+  const filtered = jobs.filter((j) => {
+    if (modes) {
+      const m = deriveMode(j);
+      if (!modes.has(m)) return false;
+    }
+    if (exps) {
+      const e = deriveExp(j);
+      if (!exps.has(e)) return false;
+    }
+    if (typeof salaryMin === "number" || typeof salaryMax === "number") {
+      const { min, max } = parseSalaryBounds(j.salary);
+      if (typeof salaryMin === "number" && (max == null || max < salaryMin)) return false;
+      if (typeof salaryMax === "number" && (min == null || min > salaryMax)) return false;
+    }
+    return true;
+  });
+
+  return filtered;
 }
 
 export async function getJob(id: string): Promise<WebJob | null> {
@@ -177,7 +285,9 @@ export async function getJob(id: string): Promise<WebJob | null> {
   return mapJob(json.data);
 }
 
-export async function getRecruiterApplications(companyId?: string): Promise<RecruiterApplicationWeb[]> {
+export async function getRecruiterApplications(
+  companyId?: string
+): Promise<RecruiterApplicationWeb[]> {
   const path = companyId
     ? `/applications/recruiter?companyId=${encodeURIComponent(companyId)}`
     : `/applications/recruiter`;
@@ -192,8 +302,12 @@ export async function getUser(id: string): Promise<WebUser | null> {
   return mapUser(json.data);
 }
 
-export async function getApplications(userId: string): Promise<ApplicationWeb[]> {
-  const json = await fetchJson<ApiResponse<ApplicationServer[]>>(`/applications?userId=${encodeURIComponent(userId)}`);
+export async function getApplications(
+  userId: string
+): Promise<ApplicationWeb[]> {
+  const json = await fetchJson<ApiResponse<ApplicationServer[]>>(
+    `/applications?userId=${encodeURIComponent(userId)}`
+  );
   if (!json.ok || !json.data) return [];
   return json.data.map(mapApplication);
 }
@@ -209,10 +323,13 @@ export async function applyToJob(params: {
   coverLetter?: string;
   resumeUrl?: string;
 }): Promise<ApplicationWeb | null> {
-  const json = await fetchJson<ApiResponse<ApplicationServer>>(`/applications`, {
-    method: "POST",
-    body: JSON.stringify(params),
-  });
+  const json = await fetchJson<ApiResponse<ApplicationServer>>(
+    `/applications`,
+    {
+      method: "POST",
+      body: JSON.stringify(params),
+    }
+  );
   if (!json.ok || !json.data) return null;
   return mapApplication(json.data);
 }
@@ -233,7 +350,9 @@ export type ApplicationDetail = {
   candidate: { id: string; name: string; email: string };
 };
 
-export async function getApplicationDetail(id: string): Promise<ApplicationDetail | null> {
+export async function getApplicationDetail(
+  id: string
+): Promise<ApplicationDetail | null> {
   const json = await fetchJson<ApiResponse<any>>(`/applications/${id}`);
   if (!json.ok || !json.data) return null;
   const s = json.data as any;
@@ -260,7 +379,10 @@ export async function getApplicationDetail(id: string): Promise<ApplicationDetai
   };
 }
 
-export async function updateApplicationStatus(id: string, status: ApplicationWeb["status"]): Promise<{ id: string; status: ApplicationWeb["status"] } | null> {
+export async function updateApplicationStatus(
+  id: string,
+  status: ApplicationWeb["status"]
+): Promise<{ id: string; status: ApplicationWeb["status"] } | null> {
   // Map web -> server
   const toServer: Record<ApplicationWeb["status"], string> = {
     applied: "applied",
@@ -269,10 +391,13 @@ export async function updateApplicationStatus(id: string, status: ApplicationWeb
     rejected: "rejected",
     offer: "hired",
   };
-  const json = await fetchJson<ApiResponse<{ id: string; status: string }>>(`/applications/${id}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ status: toServer[status] }),
-  });
+  const json = await fetchJson<ApiResponse<{ id: string; status: string }>>(
+    `/applications/${id}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status: toServer[status] }),
+    }
+  );
   if (!json.ok || !json.data) return null;
   const back = json.data.status;
   const fromServer: Record<string, ApplicationWeb["status"]> = {
@@ -288,7 +413,11 @@ export async function updateApplicationStatus(id: string, status: ApplicationWeb
 export async function uploadResume(file: File): Promise<string | null> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_BASE}/upload/resume`, { method: "POST", body: form, cache: "no-store" });
+  const res = await fetch(`${API_BASE}/upload/resume`, {
+    method: "POST",
+    body: form,
+    cache: "no-store",
+  });
   if (!res.ok) return null;
   const json = (await res.json()) as ApiResponse<{ url: string }>;
   if (!json.ok || !json.data) return null;
@@ -296,8 +425,13 @@ export async function uploadResume(file: File): Promise<string | null> {
 }
 
 // Auth
-export async function login(params: { email: string; password: string }): Promise<{ token: string; user: WebUser } | null> {
-  const json = await fetchJson<ApiResponse<{ token: string; user: UserServer }>>(`/auth/login`, {
+export async function login(params: {
+  email: string;
+  password: string;
+}): Promise<{ token: string; user: WebUser } | null> {
+  const json = await fetchJson<
+    ApiResponse<{ token: string; user: UserServer }>
+  >(`/auth/login`, {
     method: "POST",
     body: JSON.stringify(params),
   });
@@ -306,8 +440,15 @@ export async function login(params: { email: string; password: string }): Promis
   return { token, user: mapUser(user) };
 }
 
-export async function register(params: { name: string; email: string; password: string; role?: Role }): Promise<{ token: string; user: WebUser } | null> {
-  const json = await fetchJson<ApiResponse<{ token: string; user: UserServer }>>(`/auth/register`, {
+export async function register(params: {
+  name: string;
+  email: string;
+  password: string;
+  role?: Role;
+}): Promise<{ token: string; user: WebUser } | null> {
+  const json = await fetchJson<
+    ApiResponse<{ token: string; user: UserServer }>
+  >(`/auth/register`, {
     method: "POST",
     body: JSON.stringify(params),
   });
@@ -318,7 +459,9 @@ export async function register(params: { name: string; email: string; password: 
 
 export async function logout(): Promise<boolean> {
   try {
-    const json = await fetchJson<ApiResponse<null>>(`/auth/logout`, { method: "POST" });
+    const json = await fetchJson<ApiResponse<null>>(`/auth/logout`, {
+      method: "POST",
+    });
     return !!json && json.ok;
   } catch {
     return false;
@@ -334,6 +477,7 @@ export async function createJob(params: {
   description?: string;
   companyId?: string;
   companyName?: string;
+  vacancies?: number;
 }): Promise<WebJob | null> {
   // Map UI type to server format (kebab-case)
   const typeMap: Record<WebJob["type"], string> = {

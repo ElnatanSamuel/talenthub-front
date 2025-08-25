@@ -95,6 +95,11 @@ export default async function JobDetail({
                 </svg>
                 {job.location}
               </div>
+              {typeof job.vacancies === "number" && job.vacancies > 0 && (
+                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  Vacancies: {job.vacancies}
+                </div>
+              )}
             </div>
           </div>
 

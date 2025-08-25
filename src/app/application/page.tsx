@@ -76,12 +76,13 @@ export default function ApplicationsPage() {
     return apps.map((a) => {
       const job = jobsById.get(a.jobId);
       const company = job ? companiesById[job.companyId] : undefined;
+      const companyName = job?.companyName?.trim() || company?.name || "Private client";
       const status = mapStatus(a.status);
       return {
         id: a.id,
         jobId: a.jobId,
         title: job?.title ?? "Unknown",
-        company: company?.name ?? "Unknown",
+        company: companyName,
         type: job?.type ?? "-",
         applied: formatDate(a.appliedAt),
         status,
@@ -177,6 +178,7 @@ export default function ApplicationsPage() {
                   <th className="py-3 px-3 font-semibold">Job Title</th>
                   <th className="py-3 px-3 font-semibold">Applied</th>
                   <th className="py-3 px-3 font-semibold">Status</th>
+                  <th className="py-3 px-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,6 +200,15 @@ export default function ApplicationsPage() {
                       <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${mapStatus(a.status).cls}`}>
                         {mapStatus(a.status).label}
                       </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <Link
+                        href={`/application/${a.id}`}
+                        className="inline-flex items-center justify-center rounded-md bg-[#1E40AF] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-95"
+                        aria-label={`View details for ${a.candidateName || "candidate"}`}
+                      >
+                        View details
+                      </Link>
                     </td>
                   </tr>
                 ))}

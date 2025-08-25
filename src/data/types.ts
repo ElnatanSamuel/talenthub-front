@@ -20,6 +20,8 @@ export interface Job {
   type: JobType;
   salary?: string;
   createdAt: string; // ISO date
+  applicationsCount?: number;
+  vacancies?: number;
 }
 
 export interface User {

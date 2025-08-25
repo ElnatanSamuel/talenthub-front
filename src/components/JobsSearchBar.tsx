@@ -1,16 +1,39 @@
 "use client";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function JobsSearchBar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [q, setQ] = useState("");
+  const [location, setLocation] = useState("");
+
+  useEffect(() => {
+    setQ(searchParams.get("q") || "");
+    setLocation(searchParams.get("location") || "");
+  }, [searchParams]);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const next = new URLSearchParams(searchParams.toString());
+    if (q) next.set("q", q);
+    else next.delete("q");
+    if (location) next.set("location", location);
+    else next.delete("location");
+    const qs = next.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
   return (
-    <form
-      onSubmit={(e) => e.preventDefault()}
-      className="job-search-form mt-4 rounded-md  p-3 sm:p-4  dark"
-    >
+    <form onSubmit={onSubmit} className="job-search-form mt-4 rounded-md  p-3 sm:p-4  dark">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex min-h-[44px] flex-1 items-center gap-4 rounded-lg px-3 sm:px-4">
           <div className="flex flex-1 items-center gap-2 text-sm text-gray-500">
             <IconSearch className="h-4 w-4 text-gray-400" />
             <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
               className="w-full bg-transparent outline-none placeholder:text-gray-400"
               placeholder="Enter Job title"
             />
@@ -19,6 +42,8 @@ export default function JobsSearchBar() {
           <div className="flex flex-1 items-center gap-2 text-sm text-gray-500">
             <IconLocation className="h-4 w-4 text-gray-400" />
             <input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
               className="w-full bg-transparent outline-none placeholder:text-gray-400"
               placeholder="Enter location"
             />
@@ -26,16 +51,10 @@ export default function JobsSearchBar() {
           <span className="hidden h-6 w-px bg-gray-300 sm:block" />
           <div className="flex flex-1 items-center gap-2 text-sm text-gray-500">
             <IconBriefcase className="h-4 w-4 text-gray-400" />
-            <input
-              className="w-full bg-transparent outline-none placeholder:text-gray-400"
-              placeholder="Years of experience"
-            />
+            <input className="w-full bg-transparent outline-none placeholder:text-gray-400" placeholder="Years of experience" />
           </div>
         </div>
-        <button
-          type="submit"
-          className="h-[44px] shrink-0 rounded-md bg-[#7C3AED] px-5 text-sm font-semibold text-white hover:opacity-95"
-        >
+        <button type="submit" className="h-[44px] shrink-0 rounded-md bg-[#7C3AED] px-5 text-sm font-semibold text-white hover:opacity-95">
           Search
         </button>
       </div>

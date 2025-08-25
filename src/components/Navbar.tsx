@@ -42,9 +42,11 @@ export default function Navbar() {
               </Link>
             </>
           )}
-          <Link href="/employers" className={linkCls("/employers")}>
-            Employers
-          </Link>
+          {isRecruiter && (
+            <Link href="/employers" className={linkCls("/employers")}>
+              Employers
+            </Link>
+          )}
           <Link href="/application" className={linkCls("/application")}>
             Applications
           </Link>

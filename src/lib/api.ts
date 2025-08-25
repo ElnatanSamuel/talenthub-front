@@ -4,8 +4,8 @@
 import type { Job as WebJob } from "@/data/types";
 import type { User as WebUser, Role } from "@/data/types";
 
-// const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-const API_BASE = "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+// const API_BASE = "http://localhost:4000";
 
 type ApiResponse<T> = { ok: boolean; data?: T; error?: string };
 
@@ -229,14 +229,17 @@ export async function getJobs(params?: {
     return "on-site";
   }
 
-  function deriveExp(j: WebJob): "entry" | "junior" | "mid" | "senior" | "lead" | "director" {
+  function deriveExp(
+    j: WebJob
+  ): "entry" | "junior" | "mid" | "senior" | "lead" | "director" {
     const t = `${j.title} ${j.description || ""}`.toLowerCase();
     if (t.includes("director") || t.includes("executive")) return "director";
     if (t.includes("lead") || t.includes("manager")) return "lead";
     if (t.includes("senior") || /\bsr\b/.test(t)) return "senior";
     if (t.includes("mid") || t.includes("intermediate")) return "mid";
     if (t.includes("junior") || /\bjr\b/.test(t)) return "junior";
-    if (t.includes("intern") || t.includes("entry") || t.includes("fresher")) return "entry";
+    if (t.includes("intern") || t.includes("entry") || t.includes("fresher"))
+      return "entry";
     // default bucket
     return "mid";
   }
@@ -270,8 +273,10 @@ export async function getJobs(params?: {
     }
     if (typeof salaryMin === "number" || typeof salaryMax === "number") {
       const { min, max } = parseSalaryBounds(j.salary);
-      if (typeof salaryMin === "number" && (max == null || max < salaryMin)) return false;
-      if (typeof salaryMax === "number" && (min == null || min > salaryMax)) return false;
+      if (typeof salaryMin === "number" && (max == null || max < salaryMin))
+        return false;
+      if (typeof salaryMax === "number" && (min == null || min > salaryMax))
+        return false;
     }
     return true;
   });

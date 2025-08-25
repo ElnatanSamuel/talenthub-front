@@ -1,26 +1,141 @@
 @import "tailwindcss";
 
+/* Light/Dark theme via .dark on <html> */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  /* Brand colors */
+  --color-primary: #1e40af; /* Blue */
+  --color-secondary: #; /* Green */
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: #0a0a0a;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, Segoe UI,
+    Roboto, Helvetica, Arial, sans-serif;
+}
+
+.dark body {
+  background: #0a0a0a; /* near-black */
+  color: #ededed; /* light foreground */
+}
+
+/* Brand utility helpers (simple, predictable) */
+.text-primary {
+  color: var(--color-primary);
+}
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.border-primary {
+  border-color: var(--color-primary);
+}
+.text-secondary {
+  color: var(--color-secondary);
+}
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+.border-secondary {
+  border-color: var(--color-secondary);
+}
+
+/* Hero gradient */
+.bg-hero-gradient {
+  background: linear-gradient(
+    90deg,
+    var(--color-secondary) 0%,
+    rgba(16, 185, 129, 0.3) 100%
+  );
+}
+
+/* Explicit navbar theming fallback to avoid variant conflicts */
+header.tl-navbar {
+  background-color: #ffffff;
+}
+.dark header.tl-navbar {
+  background-color: #000000;
+}
+
+/* Navbar text fallbacks (ensure correct color in light/dark) */
+header.tl-navbar .logo-link,
+header.tl-navbar .nav-links a {
+  color: #0a0a0a;
+}
+.dark header.tl-navbar .logo-link,
+.dark header.tl-navbar .nav-links a {
+  color: #ffffff;
+}
+
+.category-pill {
+  background-color: #ffffff;
+  color: #0a0a0a;
+}
+.dark .category-pill {
+  background-color: #1f2937; /* gray-800 */
+  color: #ffffff;
+}
+
+.jobcard {
+  background-color: #ffffff;
+  color: black;
+}
+.dark .jobcard {
+  background-color: #1f2937;
+  color: white;
+}
+
+.category-card {
+  background-color: #ffffff;
+  color: black;
+}
+.dark .category-card {
+  background-color: #1f2937;
+  color: white;
+}
+
+.footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dark .footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.job-search-form {
+  background: #f5f5f5; /* light gray like mock */
+}
+
+.dark .job-search-form {
+  background-color: #1f2937;
+}
+
+.inner-input {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.dark .inner-input {
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.detail-card {
+  background-color: #ffffff;
+  color: black;
+}
+.dark .detail-card {
+  background-color: #1f2937;
+  color: white;
+}
+
+.apply-modal {
+  background-color: #ffffff;
+}
+
+.dark .apply-modal {
+  background-color: #1f2937;
 }

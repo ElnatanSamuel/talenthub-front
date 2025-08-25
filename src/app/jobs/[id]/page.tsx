@@ -7,9 +7,10 @@ import { getJob } from "@/lib/api";
 export default async function JobDetail({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const job = await getJob(params.id);
+  const { id } = await params;
+  const job = await getJob(id);
   if (!job) return notFound();
   const company = companiesById[job.companyId];
   const companyName = job.companyName || company?.name || "";

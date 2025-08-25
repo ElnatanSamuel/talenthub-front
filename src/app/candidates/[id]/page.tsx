@@ -9,8 +9,9 @@ function formatDate(iso: string) {
   }
 }
 
-export default async function CandidatePage({ params }: { params: { id: string } }) {
-  const user = await getUser(params.id);
+export default async function CandidatePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await getUser(id);
   if (!user) {
     return (
       <div className="space-y-4">

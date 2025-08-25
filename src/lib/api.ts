@@ -217,6 +217,74 @@ export async function applyToJob(params: {
   return mapApplication(json.data);
 }
 
+// Application detail for recruiters
+export type ApplicationDetail = {
+  id: string;
+  status: ApplicationWeb["status"];
+  submittedAt: string;
+  note?: string;
+  applicantName?: string;
+  applicantEmail?: string;
+  linkedin?: string;
+  portfolio?: string;
+  coverLetter?: string;
+  resumeUrl?: string;
+  job: { id: string; title: string; companyId: string; companyName: string };
+  candidate: { id: string; name: string; email: string };
+};
+
+export async function getApplicationDetail(id: string): Promise<ApplicationDetail | null> {
+  const json = await fetchJson<ApiResponse<any>>(`/applications/${id}`);
+  if (!json.ok || !json.data) return null;
+  const s = json.data as any;
+  const statusMap: Record<string, ApplicationWeb["status"]> = {
+    applied: "applied",
+    review: "reviewed",
+    interview: "interview",
+    rejected: "rejected",
+    hired: "offer",
+  };
+  return {
+    id: s.id,
+    status: statusMap[s.status] ?? "applied",
+    submittedAt: s.submittedAt,
+    note: s.note,
+    applicantName: s.applicantName,
+    applicantEmail: s.applicantEmail,
+    linkedin: s.linkedin,
+    portfolio: s.portfolio,
+    coverLetter: s.coverLetter,
+    resumeUrl: s.resumeUrl,
+    job: s.job,
+    candidate: s.candidate,
+  };
+}
+
+export async function updateApplicationStatus(id: string, status: ApplicationWeb["status"]): Promise<{ id: string; status: ApplicationWeb["status"] } | null> {
+  // Map web -> server
+  const toServer: Record<ApplicationWeb["status"], string> = {
+    applied: "applied",
+    reviewed: "review",
+    interview: "interview",
+    rejected: "rejected",
+    offer: "hired",
+  };
+  const json = await fetchJson<ApiResponse<{ id: string; status: string }>>(`/applications/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: toServer[status] }),
+  });
+  if (!json.ok || !json.data) return null;
+  const back = json.data.status;
+  const fromServer: Record<string, ApplicationWeb["status"]> = {
+    applied: "applied",
+    review: "reviewed",
+    interview: "interview",
+    rejected: "rejected",
+    hired: "offer",
+  };
+  return { id: json.data.id, status: fromServer[back] ?? "applied" };
+}
+
 export async function uploadResume(file: File): Promise<string | null> {
   const form = new FormData();
   form.append("file", file);

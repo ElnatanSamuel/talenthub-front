@@ -15,6 +15,12 @@ function formatDate(iso: string) {
 
 function mapStatus(status: string): { label: string; cls: string } {
   switch (status) {
+    case "applied":
+      return { label: "Applied", cls: "bg-yellow-100 text-yellow-800" };
+    case "reviewed":
+      return { label: "Reviewed", cls: "bg-blue-100 text-blue-800" };
+    case "interview":
+      return { label: "Interview", cls: "bg-indigo-100 text-indigo-800" };
     case "rejected":
       return { label: "Rejected", cls: "bg-red-100 text-red-700" };
     case "offer":
@@ -177,7 +183,7 @@ export default function ApplicationsPage() {
                 {recruiterApps.map((a) => (
                   <tr key={a.id}>
                     <td className="py-3 px-3">
-                      <Link href={`/candidates/${a.userId}`} className="hover:text-blue-800 font-medium">
+                      <Link href={`/application/${a.id}`} className="hover:text-blue-800 font-medium">
                         {a.candidateName || "Unknown"}
                       </Link>
                     </td>
